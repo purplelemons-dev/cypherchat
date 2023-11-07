@@ -52,7 +52,7 @@
         publicKey = await get("publicKey") ?? "";
         if (!(privateKey && publicKey)) {
             const keypair = await openpgp.generateKey({
-                userIDs: [{ name:"Jon Smith", email:"jsmith@purplelemons.dev"}],
+                userIDs: [{ name:"Josh Smith", email:"jsmith@purplelemons.dev"}],
                 curve: "ed25519",
                 rsaBits: 4096,
                 type: "ecc",
