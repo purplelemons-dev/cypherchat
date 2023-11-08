@@ -1,11 +1,10 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import * as openpgp from 'openpgp';
-	import { set, get, delMany } from 'idb-keyval';
-	import { SignedIn, SignedOut, User, userStore } from 'sveltefire';
+	import { set as idbSet, get as idbGet, delMany } from 'idb-keyval';
+	import { SignedIn, userStore } from 'sveltefire';
 	import { signOut } from 'firebase/auth';
 	import { auth } from '$lib';
-    import { goto } from '$app/navigation';
 
 	const MASTER_KEY = 'password';
 
@@ -32,13 +31,22 @@
 
 	let inputText = '';
 	let encryptedValue = '';
-	$: console.log(`input text: ${inputText}`);
+	const userstore = userStore(auth);
+	//$: console.log(`input text: ${inputText}`);
 
 	let privateKey: string, publicKey: string;
 
+    let userstoreUnsubscribe: ()=>void;
+
 	onMount(async () => {
-		privateKey = (await get('privateKey')) ?? '';
-		publicKey = (await get('publicKey')) ?? '';
+		userstoreUnsubscribe = auth.onAuthStateChanged((user) => {
+			if (!user) {
+				location.assign('/login');
+			}
+		});
+
+		privateKey = (await idbGet('privateKey')) ?? '';
+		publicKey = (await idbGet('publicKey')) ?? '';
 		if (!(privateKey && publicKey)) {
 			const keypair = await openpgp.generateKey({
 				userIDs: [{ name: 'Josh Smith', email: 'jsmith@purplelemons.dev' }],
@@ -50,12 +58,16 @@
 			privateKey = keypair.privateKey;
 			publicKey = keypair.publicKey;
 
-			set('privateKey', privateKey);
-			set('publicKey', publicKey);
+			idbSet('privateKey', privateKey);
+			idbSet('publicKey', publicKey);
 		} else {
 			//console.log('got keys from idb');
 		}
 	});
+
+    onDestroy(()=>{
+        if (userstoreUnsubscribe) userstoreUnsubscribe();
+    });
 </script>
 
 <main>
@@ -63,7 +75,9 @@
 		<h1>Welcome to SvelteKit</h1>
 		<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-        <button on:click={doLogout}>logout</button>
+		<p>email: {$userstore?.email}</p>
+
+		<button on:click={doLogout}>logout</button>
 
 		<input type="text" bind:value={inputText} />
 
@@ -90,12 +104,6 @@
 			}}>revoke</button
 		>
 	</SignedIn>
-	<SignedOut>
-		<script>
-			location.assign("/login");
-		</script>
-	</SignedOut>
-
 	<style>
 		input,
 		textarea {
