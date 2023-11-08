@@ -25,8 +25,9 @@ if (!getApps().length) {
   firebaseApp = initializeApp(options)
 }
 
-export const { firestore, auth, storage } = {
+export const { firestore, auth, storage, app } = {
   firestore: getFirestore(firebaseApp),
   auth: getAuth(firebaseApp),
-  storage: getStorage(firebaseApp)
+  storage: getStorage(firebaseApp),
+  app: firebaseApp
 }
