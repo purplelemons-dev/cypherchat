@@ -1,26 +1,29 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-<input type="text" bind:value={inputText}/>
+<main>
+    <h1>Welcome to SvelteKit</h1>
+    <p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-<textarea id="encryptedarea" cols="32" rows="4" bind:value={encryptedValue}></textarea>
+    <input type="text" bind:value={inputText}/>
 
-<button on:click={doEncrypt}>encrypt</button>
+    <textarea id="encryptedarea" cols="32" rows="4" bind:value={encryptedValue}></textarea>
 
-<button on:click={async() => {
-    try {
-        await navigator.clipboard.writeText(encryptedValue);
-    } catch (err) {
-        console.log("Failed to copy, probably because the clipboard api is disabled.");
-    }
-}}>copy</button>
+    <button on:click={doEncrypt}>encrypt</button>
 
-<button on:click={() => {
-    delMany(['privateKey', 'publicKey']);
-    privateKey = '';
-    publicKey = '';
-    console.log("deleted keys");
-}}>revoke</button>
+    <button on:click={async() => {
+        try {
+            await navigator.clipboard.writeText(encryptedValue);
+        } catch (err) {
+            console.log("Failed to copy, probably because the clipboard api is disabled.");
+        }
+    }}>copy</button>
+
+    <button on:click={() => {
+        delMany(['privateKey', 'publicKey']);
+        privateKey = '';
+        publicKey = '';
+        console.log("deleted keys");
+    }}>revoke</button>
+</main>
 
 <script lang="ts">
     import { onMount } from "svelte";
@@ -67,7 +70,6 @@
             console.log("got keys from idb");
         }
     });
-
 </script>
 
 <style>

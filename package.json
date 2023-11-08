@@ -34,6 +34,8 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"idb-keyval": "^6.2.1"
+		"firebase": "^9.23.0",
+		"idb-keyval": "^6.2.1",
+		"sveltefire": "^0.4.2"
 	}
 }
