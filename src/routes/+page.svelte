@@ -4,26 +4,7 @@
 	import { set as idbSet, get as idbGet, delMany } from 'idb-keyval';
 	import { SignedIn, userStore } from 'sveltefire';
 	import { signOut } from 'firebase/auth';
-	import { auth } from '$lib';
-
-	const MASTER_KEY = 'password';
-
-	const doEncrypt = async () => {
-		//console.log('encrypting');
-		openpgp
-			.encrypt({
-				message: await openpgp.createMessage({ text: inputText }),
-				encryptionKeys: await openpgp.readKeys({ armoredKeys: publicKey }),
-				signingKeys: await openpgp.decryptKey({
-					privateKey: await openpgp.readPrivateKey({ armoredKey: privateKey }),
-					passphrase: MASTER_KEY
-				})
-			})
-			.then((ciphertext) => {
-				console.log(ciphertext);
-				encryptedValue = ciphertext.toString();
-			});
-	};
+	import { auth, MASTER_KEY, doEncrypt } from '$lib';
 
 	const doLogout = async () => {
 		await signOut(auth);
@@ -32,11 +13,12 @@
 	let inputText = '';
 	let encryptedValue = '';
 	const userstore = userStore(auth);
-	//$: console.log(`input text: ${inputText}`);
-
 	let privateKey: string, publicKey: string;
+	let userstoreUnsubscribe: () => void;
 
-    let userstoreUnsubscribe: ()=>void;
+	onDestroy(() => {
+		if (userstoreUnsubscribe) userstoreUnsubscribe();
+	});
 
 	onMount(async () => {
 		userstoreUnsubscribe = auth.onAuthStateChanged((user) => {
@@ -60,14 +42,8 @@
 
 			idbSet('privateKey', privateKey);
 			idbSet('publicKey', publicKey);
-		} else {
-			//console.log('got keys from idb');
 		}
 	});
-
-    onDestroy(()=>{
-        if (userstoreUnsubscribe) userstoreUnsubscribe();
-    });
 </script>
 
 <main>
@@ -83,7 +59,11 @@
 
 		<textarea id="encryptedarea" cols="32" rows="4" bind:value={encryptedValue} />
 
-		<button on:click={doEncrypt}>encrypt</button>
+		<button
+			on:click={async () => {
+				encryptedValue = await doEncrypt(inputText, publicKey, privateKey);
+			}}>encrypt</button
+		>
 
 		<button
 			on:click={async () => {

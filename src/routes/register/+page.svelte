@@ -1,8 +1,13 @@
 <script lang="ts">
 	import LoginForm from '$lib/LoginForm.svelte';
-	import { createUserWithEmailAndPassword, type Auth, sendEmailVerification, getAuth } from 'firebase/auth';
+	import {
+		createUserWithEmailAndPassword,
+		type Auth,
+		sendEmailVerification,
+		getAuth
+	} from 'firebase/auth';
 	import { SignedIn, SignedOut, User, userStore } from 'sveltefire';
-    import {app} from "$lib";
+	import { app } from '$lib';
 
 	async function register(auth: Auth) {
 		try {
@@ -16,20 +21,20 @@
 
 	$: passwordsOK = password === confirmPassword;
 	$: emoji = passwordsOK ? '✅' : '❌';
-    
 
 	let email = '';
 	let password = '';
 	let confirmPassword = '';
 
-    const auth = getAuth(app);
-    const user = userStore(auth);
+	const auth = getAuth(app);
+	const user = userStore(auth);
 </script>
+
 <main>
 	<SignedIn>
 		<!--TODO: find a way to subscribe to $user.emailVerified-->
 		<User>
-            {#if $user && $user.emailVerified}
+			{#if $user && $user.emailVerified}
 				<h1>Already logged in</h1>
 				<p>Go <a href="/">home</a></p>
 			{:else}

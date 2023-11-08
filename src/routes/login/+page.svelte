@@ -32,7 +32,11 @@
 				}
 			}}>Delete account</button
 		>
-        <button on:click={()=>{location.assign("/")}}>main page</button>
+		<button
+			on:click={() => {
+				location.assign('/');
+			}}>main page</button
+		>
 	</SignedIn>
 	<SignedOut let:auth>
 		<h1>Login</h1>
