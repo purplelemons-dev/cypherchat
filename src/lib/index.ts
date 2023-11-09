@@ -20,3 +20,9 @@ export const doEncrypt = async (inputText:string, publicKey:string, privateKey:s
         });
 };
 
+export interface Messages {
+    author: string;
+    content: string;
+    sentAt: Date;
+}
+

@@ -2,9 +2,10 @@
 	import { onDestroy, onMount } from 'svelte';
 	import * as openpgp from 'openpgp';
 	import { set as idbSet, get as idbGet, delMany } from 'idb-keyval';
-	import { SignedIn, userStore } from 'sveltefire';
+	import { SignedIn, userStore, collectionStore } from 'sveltefire';
 	import { signOut } from 'firebase/auth';
-	import { auth, MASTER_KEY, doEncrypt } from '$lib';
+    import { addDoc, collection } from "firebase/firestore";
+	import { auth, MASTER_KEY, doEncrypt, firestore, type Messages } from '$lib';
 
 	const doLogout = async () => {
 		await signOut(auth);
@@ -15,6 +16,16 @@
 	const userstore = userStore(auth);
 	let privateKey: string, publicKey: string;
 	let userstoreUnsubscribe: () => void;
+    const fsMessages = collectionStore<Messages>(firestore, 'messages');
+
+    const sendMessage = async () => {
+        const messageCollection = collection(firestore, 'messages');
+        await addDoc(messageCollection, {
+            content: 'test' + (Math.random() * 100),
+            author: $userstore?.email,
+            sentAt: Date.now()
+        });
+    };
 
 	onDestroy(() => {
 		if (userstoreUnsubscribe) userstoreUnsubscribe();
@@ -47,11 +58,19 @@
 </script>
 
 <main>
-	<SignedIn>
+	<SignedIn let:user>
 		<h1>Welcome to SvelteKit</h1>
 		<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
 		<p>email: {$userstore?.email}</p>
+
+        {#each $fsMessages as message}
+            <p>Author: {message.author}</p>
+            <p>Message: {message.content}</p>
+        {/each}
+
+        <button on:click={sendMessage}>testbutton</button>
+        
 
 		<button on:click={doLogout}>logout</button>
 
@@ -86,7 +105,8 @@
 	</SignedIn>
 	<style>
 		input,
-		textarea {
+		textarea,
+        p {
 			display: block;
 			margin: 10px;
 		}

@@ -22,7 +22,7 @@ if (!getApps().length) {
 } else {
   firebaseApp = getApp();
   deleteApp(firebaseApp);
-  firebaseApp = initializeApp(options)
+  firebaseApp = initializeApp(options);
 }
 
 export const { firestore, auth, storage, app } = {
