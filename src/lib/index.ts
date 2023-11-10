@@ -1,10 +1,12 @@
 // place files you want to import through the `$lib` alias in this folder.
 export * from './firebase';
+import { firestore } from "./firebase";
 import * as openpgp from 'openpgp';
+import { collection, orderBy, query } from "firebase/firestore";
 
 export const MASTER_KEY = 'password';
 
-export const doEncrypt = async (inputText:string, publicKey:string, privateKey:string) => {
+export const doEncrypt = async (inputText: string, publicKey: string, privateKey: string) => {
     return await openpgp
         .encrypt({
             message: await openpgp.createMessage({ text: inputText }),
@@ -23,6 +25,10 @@ export const doEncrypt = async (inputText:string, publicKey:string, privateKey:s
 export interface Messages {
     author: string;
     content: string;
-    sentAt: Date;
+    sentAt: number;
 }
+
+export const queryBuilder = (ref: string, orderField: string, orderDirection: 'asc' | 'desc' = "asc") => {
+    return query(collection(firestore, ref), orderBy(orderField, orderDirection));
+};
 

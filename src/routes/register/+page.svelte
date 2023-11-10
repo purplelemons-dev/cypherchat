@@ -4,15 +4,24 @@
 		createUserWithEmailAndPassword,
 		type Auth,
 		sendEmailVerification,
-		getAuth
+		updateProfile
 	} from 'firebase/auth';
-	import { SignedIn, SignedOut, User, userStore } from 'sveltefire';
-	import { app } from '$lib';
+	import { SignedIn, SignedOut, User } from 'sveltefire';
 
 	async function register(auth: Auth) {
 		try {
-			await createUserWithEmailAndPassword(auth, email, password).then(async ({ user }) => {
-				await sendEmailVerification(user);
+			fetch(`/register/validname/${username}`).then(async (res) => {
+				if (res.status === 409) {
+					alert(`Username "${username}" already taken`);
+					return;
+				} else if (res.status === 200) {
+					await createUserWithEmailAndPassword(auth, email, password).then(async ({ user }) => {
+						await sendEmailVerification(user);
+						await updateProfile(user, { displayName: username });
+					});
+				} else {
+					throw new Error(`unexpected response: ${JSON.stringify(res)}`);
+				}
 			});
 		} catch (error) {
 			alert(`error registering: ${error}`);
@@ -24,22 +33,24 @@
 
 	let email = '';
 	let password = '';
+	let username = '';
 	let confirmPassword = '';
-
-	const auth = getAuth(app);
-	const user = userStore(auth);
 </script>
 
 <main>
-	<SignedIn>
+	<SignedIn let:user let:signOut>
 		<!--TODO: find a way to subscribe to $user.emailVerified-->
 		<User>
-			{#if $user && $user.emailVerified}
+			{#if user && user.emailVerified}
 				<h1>Already logged in</h1>
 				<p>Go <a href="/">home</a></p>
-			{:else}
+			{:else if user && !user.emailVerified}
 				<h1>Please verify your email</h1>
 				<p>Check your email for a verification link</p>
+			{:else}
+				{async () => {
+					await signOut();
+				}}
 			{/if}
 		</User>
 	</SignedIn>
@@ -55,7 +66,7 @@
 				register(auth);
 			}}
 		>
-			<LoginForm bind:email bind:password>
+			<LoginForm bind:email bind:password bind:username>
 				<label>
 					Confirm password:
 					<input type="password" bind:value={confirmPassword} required />

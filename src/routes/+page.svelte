@@ -2,58 +2,63 @@
 	import { onDestroy, onMount } from 'svelte';
 	import * as openpgp from 'openpgp';
 	import { set as idbSet, get as idbGet, delMany } from 'idb-keyval';
-	import { SignedIn, userStore, collectionStore } from 'sveltefire';
+	import { Collection, SignedIn, collectionStore, docStore } from 'sveltefire';
 	import { signOut } from 'firebase/auth';
-    import { addDoc, collection } from "firebase/firestore";
-	import { auth, MASTER_KEY, doEncrypt, firestore, type Messages } from '$lib';
+	import { auth, MASTER_KEY, doEncrypt, firestore, queryBuilder } from '$lib';
+	import Messenger from '$lib/Messenger.svelte';
+	import MessageDisplay from '$lib/MessageDisplay.svelte';
+	import { addDoc, collection, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 	const doLogout = async () => {
 		await signOut(auth);
 	};
 
+	const q = collectionStore(firestore, `users/${auth.currentUser?.displayName}/messages`);
+	const clearChat = async () => {
+		for (const doc of $q) {
+			deleteDoc((doc as any).ref);
+		}
+	};
+
 	let inputText = '';
 	let encryptedValue = '';
-	const userstore = userStore(auth);
 	let privateKey: string, publicKey: string;
 	let userstoreUnsubscribe: () => void;
-    const fsMessages = collectionStore<Messages>(firestore, 'messages');
-
-    const sendMessage = async () => {
-        const messageCollection = collection(firestore, 'messages');
-        await addDoc(messageCollection, {
-            content: 'test' + (Math.random() * 100),
-            author: $userstore?.email,
-            sentAt: Date.now()
-        });
-    };
 
 	onDestroy(() => {
 		if (userstoreUnsubscribe) userstoreUnsubscribe();
 	});
 
 	onMount(async () => {
-		userstoreUnsubscribe = auth.onAuthStateChanged((user) => {
+		userstoreUnsubscribe = auth.onAuthStateChanged(async (user) => {
 			if (!user) {
 				location.assign('/login');
+			} else if (user) {
+				privateKey = (await idbGet('privateKey')) ?? '';
+				publicKey = (await idbGet('publicKey')) ?? '';
+
+				if (!(privateKey && publicKey) && user.email && user.displayName) {
+					const keypair = await openpgp.generateKey({
+						userIDs: [{ name: user.displayName, email: user.email }],
+						curve: 'ed25519',
+						rsaBits: 4096,
+						type: 'ecc',
+						passphrase: MASTER_KEY
+					});
+					privateKey = keypair.privateKey;
+					publicKey = keypair.publicKey;
+
+					idbSet('privateKey', privateKey);
+					idbSet('publicKey', publicKey);
+
+					setDoc(doc(firestore, `users/${user.displayName}`), {
+                        publicKey: publicKey
+					}).then(() => {
+						alert(`Public key added to database`);
+					});
+				}
 			}
 		});
-
-		privateKey = (await idbGet('privateKey')) ?? '';
-		publicKey = (await idbGet('publicKey')) ?? '';
-		if (!(privateKey && publicKey)) {
-			const keypair = await openpgp.generateKey({
-				userIDs: [{ name: 'Josh Smith', email: 'jsmith@purplelemons.dev' }],
-				curve: 'ed25519',
-				rsaBits: 4096,
-				type: 'ecc',
-				passphrase: MASTER_KEY
-			});
-			privateKey = keypair.privateKey;
-			publicKey = keypair.publicKey;
-
-			idbSet('privateKey', privateKey);
-			idbSet('publicKey', publicKey);
-		}
 	});
 </script>
 
@@ -62,15 +67,17 @@
 		<h1>Welcome to SvelteKit</h1>
 		<p>Visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to read the documentation</p>
 
-		<p>email: {$userstore?.email}</p>
+		<p>Logged in as {user.displayName} ({user.email})</p>
 
-        {#each $fsMessages as message}
-            <p>Author: {message.author}</p>
-            <p>Message: {message.content}</p>
-        {/each}
+		<Collection
+			ref={queryBuilder(`users/${user.displayName}/messages`, 'sentAt')}
+			let:data={dataList}
+		>
+			<MessageDisplay {dataList} />
+		</Collection>
 
-        <button on:click={sendMessage}>testbutton</button>
-        
+		<Messenger {firestore} />
+		<button on:click={clearChat}>clear chat</button>
 
 		<button on:click={doLogout}>logout</button>
 
@@ -106,7 +113,7 @@
 	<style>
 		input,
 		textarea,
-        p {
+		p {
 			display: block;
 			margin: 10px;
 		}
