@@ -2,17 +2,17 @@
 export * from './firebase';
 import { firestore } from "./firebase";
 import * as openpgp from 'openpgp';
-import { collection, orderBy, query } from "firebase/firestore";
+import { collection, getDoc, orderBy, query, doc } from "firebase/firestore";
 
 export const MASTER_KEY = 'password';
 
-export const doEncrypt = async (inputText: string, publicKey: string, privateKey: string) => {
+export const doEncrypt = async (inputText: string, destinationKey: string, signingKey: string) => {
     return await openpgp
         .encrypt({
             message: await openpgp.createMessage({ text: inputText }),
-            encryptionKeys: await openpgp.readKeys({ armoredKeys: publicKey }),
+            encryptionKeys: await openpgp.readKeys({ armoredKeys: destinationKey }),
             signingKeys: await openpgp.decryptKey({
-                privateKey: await openpgp.readPrivateKey({ armoredKey: privateKey }),
+                privateKey: await openpgp.readPrivateKey({ armoredKey: signingKey }),
                 passphrase: MASTER_KEY
             })
         })
@@ -30,5 +30,9 @@ export interface Messages {
 
 export const queryBuilder = (ref: string, orderField: string, orderDirection: 'asc' | 'desc' = "asc") => {
     return query(collection(firestore, ref), orderBy(orderField, orderDirection));
+};
+
+export const getCypherUser = async (username: string) => {
+    return await getDoc(doc(firestore, "users", username));
 };
 

@@ -1,22 +1,27 @@
 <script lang="ts">
 	import { Firestore, addDoc, collection } from 'firebase/firestore';
-	//import { userstore } from '$lib';
+	import { doEncrypt, getCypherUser } from '$lib';
 	import { SignedIn } from 'sveltefire';
 	import type { User } from 'firebase/auth';
+	import { get as idbGet } from 'idb-keyval';
 	export let firestore: Firestore;
 
 	let messageContent = '';
 	let sendTo = '';
 
 	const sendMessage = async (user: User) => {
-		let temp = messageContent;
-		messageContent = '';
-		const messageCollection = collection(firestore, `users/${sendTo}/messages`);
-		await addDoc(messageCollection, {
-			content: temp,
-			author: user.email, //$userstore?.email,
-			sentAt: Date.now()
-		});
+		const recipient = await getCypherUser(sendTo);
+		const privateKey = await idbGet('privateKey');
+		if (recipient.exists() && privateKey) {
+			let encryptedText = await doEncrypt(messageContent, recipient.get('publicKey'), privateKey);
+			messageContent = '';
+			const messageCollection = collection(firestore, `users/${sendTo}/messages`);
+			await addDoc(messageCollection, {
+				content: encryptedText,
+				author: user.displayName,
+				sentAt: Date.now()
+			});
+		}
 	};
 </script>
 

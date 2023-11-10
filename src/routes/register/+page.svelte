@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getCypherUser } from '$lib';
 	import LoginForm from '$lib/LoginForm.svelte';
 	import {
 		createUserWithEmailAndPassword,
@@ -10,19 +11,19 @@
 
 	async function register(auth: Auth) {
 		try {
-			fetch(`/register/validname/${username}`).then(async (res) => {
-				if (res.status === 409) {
-					alert(`Username "${username}" already taken`);
-					return;
-				} else if (res.status === 200) {
-					await createUserWithEmailAndPassword(auth, email, password).then(async ({ user }) => {
-						await sendEmailVerification(user);
+			const cypherUser = await getCypherUser(username);
+			if (!cypherUser.exists()) {
+				await createUserWithEmailAndPassword(auth, email, password).then(async ({ user }) => {
+					if (user) {
 						await updateProfile(user, { displayName: username });
-					});
-				} else {
-					throw new Error(`unexpected response: ${JSON.stringify(res)}`);
-				}
-			});
+						await sendEmailVerification(user);
+						alert('Verification email sent');
+					}
+				});
+			} else {
+				alert(`Username "${username}" taken`);
+				username = '';
+			}
 		} catch (error) {
 			alert(`error registering: ${error}`);
 		}
@@ -58,12 +59,12 @@
 	<SignedOut let:auth>
 		<h1>Register</h1>
 		<form
-			on:submit|preventDefault={() => {
+			on:submit|preventDefault={async () => {
 				if (!passwordsOK) {
 					alert('Passwords do not match');
 					return;
 				}
-				register(auth);
+				await register(auth);
 			}}
 		>
 			<LoginForm bind:email bind:password bind:username>

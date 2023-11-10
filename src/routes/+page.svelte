@@ -52,7 +52,7 @@
 					idbSet('publicKey', publicKey);
 
 					setDoc(doc(firestore, `users/${user.displayName}`), {
-                        publicKey: publicKey
+						publicKey: publicKey
 					}).then(() => {
 						alert(`Public key added to database`);
 					});
@@ -77,6 +77,7 @@
 		</Collection>
 
 		<Messenger {firestore} />
+
 		<button on:click={clearChat}>clear chat</button>
 
 		<button on:click={doLogout}>logout</button>
